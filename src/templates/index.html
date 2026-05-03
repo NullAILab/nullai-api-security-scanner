@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Security Scanner — NullAI Lab</title>
+  <style>
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --border:   #30363d;
+      --accent:   #58a6ff;
+      --green:    #3fb950;
+      --red:      #f85149;
+      --yellow:   #d29922;
+      --orange:   #e3843a;
+      --purple:   #bc8cff;
+      --text:     #c9d1d9;
+      --muted:    #8b949e;
+      --critical: #f85149;
+      --high:     #e3843a;
+      --medium:   #d29922;
+      --low:      #3fb950;
+      --info:     #58a6ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ── Sidebar ── */
+    nav {
+      width: 220px;
+      min-height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 24px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: fixed;
+      top: 0; left: 0;
+    }
+    nav h2 {
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 0 20px 12px;
+    }
+    nav a {
+      display: block;
+      padding: 9px 20px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 14px;
+      border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    nav a:hover, nav a.active {
+      color: var(--accent);
+      border-left-color: var(--accent);
+      background: rgba(88,166,255,.07);
+    }
+    nav .logo {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    nav .logo span { color: var(--accent); }
+
+    /* ── Main ── */
+    main {
+      margin-left: 220px;
+      flex: 1;
+      padding: 32px;
+      max-width: 960px;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 6px;
+    }
+    .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+
+    /* ── Panels ── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 24px;
+      display: none;
+    }
+    .panel.active { display: block; }
+    .panel h3 { font-size: 16px; margin-bottom: 16px; color: var(--accent); }
+
+    /* ── Forms ── */
+    .form-row { margin-bottom: 14px; }
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 5px; }
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 14px;
+      padding: 8px 12px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 80px; font-family: monospace; }
+
+    .checkbox-row { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 14px; }
+    .checkbox-row label {
+      display: flex; align-items: center; gap: 6px;
+      color: var(--text); font-size: 14px; cursor: pointer;
+    }
+    input[type="checkbox"] { width: auto; accent-color: var(--accent); }
+
+    button {
+      background: var(--accent);
+      color: #0d1117;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 9px 22px;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    button:hover { opacity: .85; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── Results ── */
+    .results { margin-top: 24px; }
+    .result-card {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 18px;
+      margin-bottom: 12px;
+      background: var(--bg);
+    }
+    .result-card.fail { border-left: 4px solid var(--red); }
+    .result-card.pass { border-left: 4px solid var(--green); }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      letter-spacing: .05em;
+    }
+    .badge-CRITICAL { background: var(--critical); color: #fff; }
+    .badge-HIGH     { background: var(--high);     color: #fff; }
+    .badge-MEDIUM   { background: var(--medium);   color: #000; }
+    .badge-LOW      { background: var(--low);      color: #000; }
+    .badge-INFO     { background: var(--info);     color: #000; }
+    .badge-PASS     { background: var(--green);    color: #000; }
+    .badge-FAIL     { background: var(--red);      color: #fff; }
+
+    .result-name { font-size: 15px; font-weight: 600; }
+    .result-desc { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+    .result-detail {
+      font-size: 12px;
+      font-family: monospace;
+      color: var(--text);
+      background: var(--surface);
+      border-radius: 4px;
+      padding: 8px 10px;
+      white-space: pre-wrap;
+      margin-top: 8px;
+    }
+    .result-remediation {
+      font-size: 12px;
+      color: var(--yellow);
+      margin-top: 6px;
+    }
+
+    /* ── Summary bar ── */
+    .summary-bar {
+      display: flex;
+      gap: 16px;
+      padding: 14px 18px;
+      background: var(--surface);
+      border-radius: 6px;
+      margin-bottom: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .stat { text-align: center; }
+    .stat-value { font-size: 22px; font-weight: 700; }
+    .stat-label { font-size: 11px; color: var(--muted); }
+    .risk-badge {
+      margin-left: auto;
+      font-size: 16px;
+      font-weight: 700;
+      padding: 6px 18px;
+      border-radius: 8px;
+    }
+
+    /* ── Payload table ── */
+    .payload-section { margin-bottom: 18px; }
+    .payload-section h4 { font-size: 13px; color: var(--purple); margin-bottom: 8px; }
+    .payload-item {
+      font-family: monospace;
+      font-size: 12px;
+      padding: 4px 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      margin-bottom: 4px;
+      display: flex;
+      gap: 12px;
+    }
+    .payload-val { color: var(--accent); flex: 0 0 auto; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .payload-desc { color: var(--muted); flex: 1; }
+
+    /* ── Spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hidden { display: none !important; }
+    .error-box {
+      background: rgba(248,81,73,.1);
+      border: 1px solid var(--red);
+      border-radius: 6px;
+      padding: 12px 16px;
+      color: var(--red);
+      font-size: 14px;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Null<span>AI</span> Lab</div>
+  <h2>API Scanner</h2>
+  <a href="#" class="active" data-panel="panel-scan">Full Scan</a>
+  <a href="#" data-panel="panel-demo-auth">Auth Check</a>
+  <a href="#" data-panel="panel-demo-headers">Header Check</a>
+  <a href="#" data-panel="panel-demo-fuzz">Fuzz Demo</a>
+  <a href="#" data-panel="panel-payloads">Payload Library</a>
+</nav>
+
+<main>
+  <h1>API Security Scanner</h1>
+  <p class="subtitle">OWASP API Top-10 · GraphQL · Parameter Fuzzing</p>
+
+  <!-- ── Full Scan ── -->
+  <div id="panel-scan" class="panel active">
+    <h3>Full Scan</h3>
+    <div class="form-row">
+      <label>Target URL</label>
+      <input type="text" id="scan-url" placeholder="https://api.example.com" value="https://httpbin.org" />
+    </div>
+    <div class="form-row">
+      <label>Auth Header (optional, JSON)</label>
+      <input type="text" id="scan-auth" placeholder='{"Authorization": "Bearer token"}' />
+    </div>
+    <div class="checkbox-row">
+      <label><input type="checkbox" id="scan-auth-chk" checked /> Auth Check</label>
+      <label><input type="checkbox" id="scan-headers-chk" checked /> Headers Check</label>
+      <label><input type="checkbox" id="scan-versions-chk" checked /> Version Endpoints</label>
+      <label><input type="checkbox" id="scan-graphql-chk" /> GraphQL</label>
+      <label><input type="checkbox" id="scan-fuzz-chk" /> Fuzzing</label>
+    </div>
+    <button id="scan-btn" onclick="runScan()">Run Scan</button>
+    <div id="scan-results" class="results hidden"></div>
+  </div>
+
+  <!-- ── Auth Demo ── -->
+  <div id="panel-demo-auth" class="panel">
+    <h3>Authentication Check Demo</h3>
+    <p class="result-desc" style="margin-bottom:16px">
+      Simulates sending a request without credentials. Expects 401 or 403.
+    </p>
+    <div class="form-row">
+      <label>Mock Status Code</label>
+      <input type="number" id="auth-status" value="200" min="100" max="599" />
+    </div>
+    <button onclick="runAuthDemo()">Check</button>
+    <div id="auth-results" class="results hidden"></div>
+  </div>
+
+  <!-- ── Headers Demo ── -->
+  <div id="panel-demo-headers" class="panel">
+    <h3>Security Headers Demo</h3>
+    <div class="form-row">
+      <label>Mock Headers (JSON)</label>
+      <textarea id="headers-input">{"X-Content-Type-Options": "nosniff"}</textarea>
+    </div>
+    <div class="form-row">
+      <label>Mock Body (text — checked for stack traces)</label>
+      <textarea id="headers-body" style="min-height:60px">{"error": "not found"}</textarea>
+    </div>
+    <button onclick="runHeadersDemo()">Check</button>
+    <div id="headers-results" class="results hidden"></div>
+  </div>
+
+  <!-- ── Fuzz Demo ── -->
+  <div id="panel-demo-fuzz" class="panel">
+    <h3>Parameter Fuzzing Demo</h3>
+    <p class="result-desc" style="margin-bottom:16px">
+      Runs all payloads against a mock response to show what anomalies would be flagged.
+    </p>
+    <div class="form-row">
+      <label>Mock Status Code</label>
+      <input type="number" id="fuzz-status" value="200" min="100" max="599" />
+    </div>
+    <div class="form-row">
+      <label>Mock Body (JSON) — include SQL error strings, reflected XSS, etc.</label>
+      <textarea id="fuzz-body">{"error": "sql syntax error near '1'"}</textarea>
+    </div>
+    <button onclick="runFuzzDemo()">Run Fuzz Demo</button>
+    <div id="fuzz-results" class="results hidden"></div>
+  </div>
+
+  <!-- ── Payload Library ── -->
+  <div id="panel-payloads" class="panel">
+    <h3>Payload Library</h3>
+    <div id="payloads-content">Loading…</div>
+  </div>
+</main>
+
+<script>
+// ── Nav ──
+document.querySelectorAll('nav a').forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelectorAll('nav a').forEach(l => l.classList.remove('active'));
+    link.classList.add('active');
+    const panelId = link.dataset.panel;
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(panelId).classList.add('active');
+    if (panelId === 'panel-payloads') loadPayloads();
+  });
+});
+
+// ── Helpers ──
+function severityColor(sev) {
+  return { CRITICAL: '#f85149', HIGH: '#e3843a', MEDIUM: '#d29922', LOW: '#3fb950', INFO: '#58a6ff' }[sev] || '#8b949e';
+}
+
+function renderCard(c) {
+  const cls = c.status === 'PASS' ? 'pass' : 'fail';
+  const detail = c.detail ? `<div class="result-detail">${escHtml(c.detail)}</div>` : '';
+  const rem = c.remediation ? `<div class="result-remediation">⚡ ${escHtml(c.remediation)}</div>` : '';
+  return `
+    <div class="result-card ${cls}">
+      <div class="result-header">
+        <span class="badge badge-${c.severity}">${c.severity}</span>
+        <span class="badge badge-${c.status}">${c.status}</span>
+        <span class="result-name">${escHtml(c.name || c.check_id)}</span>
+      </div>
+      <div class="result-desc">${escHtml(c.description)}</div>
+      ${detail}${rem}
+    </div>`;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function showSpinner(btn) {
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Scanning…';
+}
+function resetBtn(btn, label) {
+  btn.disabled = false;
+  btn.textContent = label;
+}
+
+// ── Full Scan ──
+async function runScan() {
+  const btn = document.getElementById('scan-btn');
+  showSpinner(btn);
+  const el = document.getElementById('scan-results');
+  el.classList.add('hidden');
+  el.innerHTML = '';
+
+  let authHeaders = null;
+  const authRaw = document.getElementById('scan-auth').value.trim();
+  if (authRaw) {
+    try { authHeaders = JSON.parse(authRaw); } catch {}
+  }
+
+  const body = {
+    target: document.getElementById('scan-url').value.trim(),
+    auth_headers: authHeaders,
+    check_auth: document.getElementById('scan-auth-chk').checked,
+    check_headers: document.getElementById('scan-headers-chk').checked,
+    check_versions: document.getElementById('scan-versions-chk').checked,
+    check_graphql: document.getElementById('scan-graphql-chk').checked,
+    check_fuzz: document.getElementById('scan-fuzz-chk').checked,
+  };
+
+  try {
+    const r = await fetch('/api/scan', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const data = await r.json();
+    renderScanResults(el, data);
+  } catch (e) {
+    el.innerHTML = `<div class="error-box">Error: ${escHtml(e.message)}</div>`;
+  } finally {
+    el.classList.remove('hidden');
+    resetBtn(btn, 'Run Scan');
+  }
+}
+
+function renderScanResults(el, data) {
+  const riskColor = severityColor(data.risk_score);
+  let html = `
+    <div class="summary-bar">
+      <div class="stat"><div class="stat-value">${data.total}</div><div class="stat-label">Checks</div></div>
+      <div class="stat"><div class="stat-value" style="color:var(--red)">${data.failed}</div><div class="stat-label">Failed</div></div>
+      <div class="stat"><div class="stat-value" style="color:var(--green)">${data.total - data.failed}</div><div class="stat-label">Passed</div></div>
+      <span class="risk-badge" style="background:${riskColor};color:#fff">Risk: ${data.risk_score}</span>
+    </div>`;
+  for (const c of data.checks) html += renderCard(c);
+  el.innerHTML = html;
+}
+
+// ── Auth Demo ──
+async function runAuthDemo() {
+  const el = document.getElementById('auth-results');
+  el.classList.add('hidden');
+  const status = parseInt(document.getElementById('auth-status').value) || 200;
+  try {
+    const r = await fetch('/api/demo/auth', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ status_code: status })
+    });
+    const c = await r.json();
+    el.innerHTML = renderCard(c);
+  } catch(e) {
+    el.innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+  }
+  el.classList.remove('hidden');
+}
+
+// ── Headers Demo ──
+async function runHeadersDemo() {
+  const el = document.getElementById('headers-results');
+  el.classList.add('hidden');
+  let headers = {};
+  try { headers = JSON.parse(document.getElementById('headers-input').value); } catch {}
+  const body = document.getElementById('headers-body').value;
+  try {
+    const r = await fetch('/api/demo/headers', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ headers, body })
+    });
+    const data = await r.json();
+    el.innerHTML = renderCard(data.security_headers) + renderCard(data.verbose_errors);
+  } catch(e) {
+    el.innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+  }
+  el.classList.remove('hidden');
+}
+
+// ── Fuzz Demo ──
+async function runFuzzDemo() {
+  const el = document.getElementById('fuzz-results');
+  el.classList.add('hidden');
+  const status = parseInt(document.getElementById('fuzz-status').value) || 200;
+  let body = null;
+  try { body = JSON.parse(document.getElementById('fuzz-body').value); } catch {}
+  try {
+    const r = await fetch('/api/demo/fuzz', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ status_code: status, body })
+    });
+    const c = await r.json();
+    el.innerHTML = renderCard(c);
+    if (c.evidence && c.evidence.findings) {
+      let findings = '<div style="margin-top:12px"><strong>Findings:</strong></div>';
+      for (const f of c.evidence.findings) {
+        findings += `<div class="result-card fail" style="margin-top:8px">
+          <div class="result-header">
+            <span class="badge badge-${f.severity}">${f.severity}</span>
+            <span class="result-name">${escHtml(f.category)}</span>
+          </div>
+          <div class="result-desc">${escHtml(f.reason)}</div>
+          <div class="result-detail">payload: ${escHtml(f.payload)}</div>
+        </div>`;
+      }
+      el.innerHTML += findings;
+    }
+  } catch(e) {
+    el.innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+  }
+  el.classList.remove('hidden');
+}
+
+// ── Payload Library ──
+async function loadPayloads() {
+  const el = document.getElementById('payloads-content');
+  if (el.dataset.loaded) return;
+  try {
+    const r = await fetch('/api/payloads');
+    const data = await r.json();
+    let html = `<p style="color:var(--muted);font-size:13px;margin-bottom:16px">${data.total} payloads across ${Object.keys(data.categories).length} categories</p>`;
+    for (const [cat, items] of Object.entries(data.categories)) {
+      html += `<div class="payload-section"><h4>${escHtml(cat.replace(/_/g,' ').toUpperCase())}</h4>`;
+      for (const p of items) {
+        html += `<div class="payload-item">
+          <span class="payload-val">${escHtml(p.value)}</span>
+          <span class="payload-desc">${escHtml(p.description)}</span>
+        </div>`;
+      }
+      html += '</div>';
+    }
+    el.innerHTML = html;
+    el.dataset.loaded = '1';
+  } catch(e) {
+    el.innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+  }
+}
+</script>
+</body>
+</html>
