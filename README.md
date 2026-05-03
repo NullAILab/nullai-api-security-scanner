@@ -1,4 +1,6 @@
-# 30 — API Security Scanner
+# API Security Scanner
+
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white) ![Tests](https://img.shields.io/badge/Tests-78%20passing-brightgreen) ![License](https://img.shields.io/badge/License-MIT-green)
 
 > **Difficulty:** Intermediate | **Language:** Python / FastAPI / Jinja2
 
@@ -134,4 +136,3 @@ report = scanner.run(check_auth=True, check_headers=True)
 
 ---
 
-*NullAI Lab — Project 30 | API Security Scanner*
